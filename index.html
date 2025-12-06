@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AD player tts 0.5</title>
+    <title>AD player tts 0.5.01</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -28,6 +28,23 @@
             border: 1px solid #555;
             border-radius: 5px;
             font-size: 1em;
+            /* CORREÇÃO ROBUSTA PARA DISPOSITIVOS MÓVEIS (iOS/Android) */
+            /* Garante que o elemento seja tratável e clicável */
+            height: 44px; /* Garante uma altura mínima de toque */
+            line-height: 24px; /* Ajuda a centralizar o texto (se visível) */
+            touch-action: manipulation;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        /* Ajuste específico para input[type=file] para melhor UX em mobile */
+        input[type="file"] {
+            /* Remove estilos nativos do navegador que podem quebrar o layout */
+            -webkit-appearance: none; 
+            appearance: none;
+            /* Se for necessário customizar a aparência do botão "Selecionar Arquivo" (o que não é trivial)
+               Você pode querer wrap o input com um div e esconder o input em si,
+               mas para manter a simplicidade e o foco na usabilidade, vamos manter as correções acima. */
         }
 
         input:focus, select:focus, button:focus {
@@ -73,60 +90,18 @@
         .btn-minute {
             background-color: #004085; /* Um azul um pouco mais escuro para diferenciar */
         }
-
-        /* ESTILOS PARA O MODAL DE TUTORIAL */
-        .modal {
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.8);
-            display: none; /* Escondido por padrão */
-        }
-        
-        .modal-content {
-            background-color: #333;
-            margin: 10% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 90%;
-            max-width: 600px;
-            border-radius: 8px;
-            color: #fff;
-        }
-
-        .close-button {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .close-button:hover,
-        .close-button:focus {
-            color: #fff;
-            text-decoration: none;
-        }
-
     </style>
 </head>
 <body>
 
-    <h1 id="txtTitle">AD player tts</h1>
+    <h1 id="txtTitle">Player de audiodescrição</h1>
+    
     <p id="txtSubtitle">
         Seja bem-vindo ao player de audiodescrição!
         <br><br>
-        Este player foi desenvolvido para permitir que audiodescrições no formato .srt, utilizado em arquivos de legendas, sejam lidas pela voz TTS do seu sistema.
+        Este player foi desenvolvido para permitir que audiodescrições no formato **.srt**, utilizado em arquivos de legendas, sejam lidas pela voz TTS do seu sistema.
         <br><br>
-        Este projeto foi criado por Diego Ricardo Matos, com o apoio do modelo Gemini 3 Pro.
-    </p>
-
-    <p id="txtInstructions">
-        Para conferir as notas de uso, <a href="#" id="btnShowTutorial" onclick="showTutorialModal(); return false;" aria-label="Abrir notas de uso do player.">clique aqui</a>.
+        Este projeto foi criado por **Diego Ricardo Matos**, com o apoio do modelo **Gemini 3 Pro**.
     </p>
     
     <div id="monitor-legenda">- - -</div>
@@ -172,46 +147,32 @@
     <div class="input-group">
         <div>
             <button id="btnBack10" onclick="seek(-10)" aria-label="Retroceder 10 segundos">Retroceder 10 segundos</button>
-            <button id="btnPlay" onclick="togglePlay()" aria-label="reproduzir / pausar">Reproduzir / pausar</button>
+            <button id="btnPlay" onclick="togglePlay()" aria-label="Play">Play</button>
             <button id="btnFwd10" onclick="seek(10)" aria-label="Avançar 10 segundos">Avançar 10 segundos</button>
             
-            <button id="btnBack60" onclick="seek(-60)" class="btn-minute" aria-label="Retroceder 1 minuto">Retroceder 1 minuto</button>
-            <button id="btnFwd60" onclick="seek(60)" class="btn-minute" aria-label="Avançar 1 minuto">Avançar 1 minuto</button>
+            <button id="btnBack60" onclick="seek(-60)" class="btn-minute" aria-label="Retroceder 1 minuto">Retroceder 1 min</button>
+            <button id="btnFwd60" onclick="seek(60)" class="btn-minute" aria-label="Avançar 1 minuto">Avançar 1 min</button>
         </div>
         <br>
         
         <h2 id="txtHeaderSync">Sincronia da audiodescrição</h2>
 
         <div>
-            <button id="btnSyncMinus" onclick="adjustSync(-1)" aria-label="Atrasar audiodescrição 1 segundo">Atrasar AD 1s</button>
-            <button id="btnSyncPlus" onclick="adjustSync(1)" aria-label="Adiantar audiodescrição 1 segundo">Adiantar AD 1s</button>
+            <button id="btnSyncMinus" onclick="adjustSync(-1)" aria-label="Atrasar audiodescrição 1 segundo">AD -1s</button>
+            <button id="btnSyncPlus" onclick="adjustSync(1)" aria-label="Adiantar audiodescrição 1 segundo">AD +1s</button>
         </div>
         <div id="syncStatus" class="sr-status" aria-live="polite">0s</div>
     </div>
 
     <audio id="mainAudio"></audio>
 
-    <div id="tutorialModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content" role="document">
-            <span class="close-button" onclick="hideTutorialModal()" role="button" aria-label="Fechar notas de uso">&times;</span>
-            
-            <h2 id="modalTitle">Notas de Uso</h2>
-            
-            <div id="tutorialContent">
-                </div>
-            
-            <button onclick="hideTutorialModal()">Entendido!</button>
-        </div>
-    </div>
-
     <script>
         // --- 1. DICIONÁRIO DE IDIOMAS ---
         const langData = {
             pt: {
-                title: "AD player tts",
+                title: "Player de audiodescrição",
+                // NOVO TEXTO DE APRESENTAÇÃO
                 subtitle: "Seja bem-vindo ao player de audiodescrição!\n\nEste player foi desenvolvido para permitir que audiodescrições no formato .srt, utilizado em arquivos de legendas, sejam lidas pela voz TTS do seu sistema.\n\nEste projeto foi criado por Diego Ricardo Matos, com o apoio do modelo Gemini 3 Pro.",
-                instructions: "Para conferir as notas de uso, clique aqui. Nota: Abrirá uma caixa de diálogo no final da página",
-                instructionsLinkAria: "Abrir notas de uso do player.", // NOVO
                 hFiles: "Escolha de arquivos",
                 lAudio: "Selecione o arquivo de áudio:",
                 lSrt: "Selecione o arquivo de audiodescrição (.srt):",
@@ -224,54 +185,43 @@
                 lDuck: "Volume da redução do áudio:",
                 hCtrl: "Controles do player",
                 bBack: "Retroceder 10 segundos",
-                bPlay: "Reproduzir", 
-                bPause: "Pausar", 
+                bPlay: "Play",
+                bPause: "Pause",
                 bFwd: "Avançar 10 segundos",
                 
                 // Botão Mudo (Estados)
-                bMuteOn: "Ativar Mudo do áudio",
-                bMuteOff: "Desativar Mudo do áudio",
+                bMuteOn: "Ativar Mudo",   // Texto quando tem som, para deixar mudo
+                bMuteOff: "Desativar Mudo", // Texto quando está mudo, para voltar som
                 
-                // Novos Botões 1 Minuto
-                bBack60: "Retroceder 1 minuto",
-                bFwd60: "Avançar 1 minuto",
+                // Novos Botões 1 Min
+                bBack60: "Retroceder 1 min",
+                bFwd60: "Avançar 1 min",
 
                 // Sincronia
                 hSync: "Sincronia da audiodescrição",
-                bSyncM: "Atrasar AD 1s", 
-                bSyncP: "Adiantar AD 1s", 
+                lSync: "Ajuste fino:",
+                bSyncM: "AD -1s",
+                bSyncP: "AD +1s",
                 
-                // NOTAS
-                modalTitle: "Notas de Uso",
-                modalContent: [
-                    "No Windows, as vozes disponíveis são as da Microsoft (OneCore) e as do Google TTS (online).",
-                    "É recomendável utilizar as vozes do Google TTS até a velocidade de 1.7. Acima disso, as vozes podem parecer não estar funcionando, mas na realidade, estão apenas atingindo o limite máximo de velocidade.",
-                    "No Android, pode ser detectada apenas a voz padrão do sistema.",
-                    "No Android, não é possível bloquear a tela e continuar ouvindo a audiodescrição."
-                ].join('\n'), 
-                modalClose: "Entendido!",
-                modalCloseAria: "Fechar notas de uso",
-
                 loading: "Aguardando arquivos...",
+                // 'Sistema pronto.' REMOVIDO
                 adLoaded: "Audiodescrição carregada",
                 audioReady: "Áudio pronto.",
                 testPhrase: "Teste de voz.",
                 alertReload: "Tente recarregar a página."
             },
-            // TEXTOS EM INGLÊS
+            // TEXTOS EM INGLÊS ATUALIZADOS
             en: {
-                title: "AD Player TTS", 
-                subtitle: "Welcome to the Audio Description Player!\n\nThis player is designed to allow audio descriptions in the .srt format, used in subtitle files, to be read by your system's TTS voice.\n\nThis project was created by Diego Ricardo Matos, with the support of the Gemini 3 Pro model.",
-                instructions: "To check the usage notes, click here. Note: A dialog box will open at the bottom of the page",
-                instructionsLinkAria: "Open player usage notes.", // NOVO
+                title: "Audio Description Player",
+                subtitle: "Welcome to the Audio Description Player!\n\nThis player is designed to allow audio descriptions in the **.srt** format, used in subtitle files, to be read by your system's TTS voice.\n\nThis project was created by **Diego Ricardo Matos**, with the support of the **Gemini 3 Pro** model.",
                 hFiles: "File Selection",
                 lAudio: "Select Audio File:",
                 lSrt: "Select Audio Description File (.srt):",
                 hVoice: "Voice Settings",
                 lVoice: "Select Voice:",
-                bReload: "Reload Voices", 
+                bReload: "🔄 Reload Voices",
                 lSpeed: "Select Speed:",
-                bTest: "Test Voice", 
+                bTest: "Test Voice",
                 hDuck: "Volume Controls",
                 lDuck: "Audio Ducking Volume:",
                 hCtrl: "Player Controls",
@@ -283,23 +233,13 @@
                 bMuteOn: "Mute Audio",
                 bMuteOff: "Unmute Audio",
                 
-                bBack60: "Rewind 1 minute",
-                bFwd60: "Forward 1 minute",
+                bBack60: "Rewind 1 min",
+                bFwd60: "Forward 1 min",
 
                 hSync: "Audio Description Synchronization",
-                bSyncM: "Delay AD 1s", 
-                bSyncP: "Advance AD 1s",
-                
-                // NOTAS
-                modalTitle: "Usage Notes",
-                modalContent: [
-                    "On Windows, the available voices are from Microsoft (OneCore) and Google TTS (online).",
-                    "It is recommended to use Google TTS voices up to speed 1.7. Above that, the voices might seem not to be working, but they are just reaching their maximum speed limit.",
-                    "On Android, only the system's default voice may be detected.",
-                    "On Android, it is not possible to lock the screen and continue listening to the audio description."
-                ].join('\n'),
-                modalClose: "Understood!",
-                modalCloseAria: "Close usage notes",
+                lSync: "Fine tune:",
+                bSyncM: "AD -1s",
+                bSyncP: "AD +1s",
                 
                 loading: "Waiting for files...",
                 adLoaded: "Audio Description loaded",
@@ -316,93 +256,13 @@
         const currentLang = (userLang.startsWith('pt')) ? 'pt' : 'en';
         const txt = langData[currentLang];
 
-        // --- FUNÇÕES DO MODAL ---
-        const tutorialModal = document.getElementById('tutorialModal');
-        const modalContentArea = document.getElementById('tutorialContent');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalCloseButton = tutorialModal.querySelector('.close-button');
-        const modalAcknowledgeButton = tutorialModal.querySelector('.modal-content button');
-        const btnShowTutorial = document.getElementById('btnShowTutorial');
-
-        function formatNotesAsList(content) {
-            // Converte o texto separado por '\n' em uma lista não ordenada (<ul>)
-            const items = content.split('\n').map(item => `<li>${item.trim()}</li>`).join('');
-            return `<ul>${items}</ul>`;
-        }
-
-        function showTutorialModal() {
-            // Aplica textos do modal
-            modalTitle.innerText = txt.modalTitle;
-            modalAcknowledgeButton.innerText = txt.modalClose;
-            
-            // INJETA O CONTEÚDO COMO UMA LISTA
-            modalContentArea.innerHTML = formatNotesAsList(txt.modalContent);
-            
-            // ATUALIZA ARIA-LABEL DO BOTÃO FECHAR
-            modalCloseButton.setAttribute("aria-label", txt.modalCloseAria);
-
-            // Mostra o modal
-            tutorialModal.style.display = 'block';
-            
-            // Foca no botão de fechar para acessibilidade
-            modalCloseButton.focus();
-
-            // Desativa a rolagem do corpo da página (opcional, mas recomendado para modais)
-            document.body.style.overflow = 'hidden';
-        }
-
-        function hideTutorialModal() {
-            tutorialModal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-
-            // Foca de volta no link que abriu o modal
-            btnShowTutorial.focus();
-        }
-
-        // Fecha o modal ao clicar fora dele
-        window.onclick = function(event) {
-            if (event.target == tutorialModal) {
-                hideTutorialModal();
-            }
-        }
-
-        // Fecha o modal com a tecla ESC
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && tutorialModal.style.display === 'block') {
-                hideTutorialModal();
-            }
-        });
-        
         // Aplica textos na inicialização
         window.onload = function() {
-            // Aplica Título
             document.getElementById('txtTitle').innerText = txt.title;
-            
-            // Aplica Subtítulo
+            // ATUALIZA PARÁGRAFO DE APRESENTAÇÃO
             document.getElementById('txtSubtitle').innerHTML = txt.subtitle.replace(/\n/g, '<br>');
-            
-            // CORREÇÃO FINAL DA TRADUÇÃO DO LINK
-            const instructionsElement = document.getElementById('txtInstructions');
-            
-            // 1. Obtém a tag <a> HTML do link existente
-            const linkTag = instructionsElement.querySelector('a');
-            
-            // 2. Define o ARIA-LABEL correto do link
-            linkTag.setAttribute("aria-label", txt.instructionsLinkAria);
-            
-            // 3. Obtém o HTML do link, garantindo que o novo aria-label esteja nele
-            const linkHtml = linkTag.outerHTML; 
-            
-            const fullInstructionsText = txt.instructions;
-            
-            // 4. Encontra o placeholder (o texto do link no dicionário, e não no HTML)
-            const linkPlaceholder = currentLang === 'pt' ? 'clique aqui' : 'click here';
-            
-            // 5. Substitui o placeholder pelo HTML do link completo
-            let finalHtml = fullInstructionsText.replace(linkPlaceholder, linkHtml);
-            
-            instructionsElement.innerHTML = finalHtml;
-            // Fim da Correção.
+            // REMOVE 'Sistema pronto.'
+            // document.getElementById('monitor-legenda').innerText = txt.ready; // LINHA REMOVIDA
             
             document.getElementById('txtHeaderFiles').innerText = txt.hFiles;
             document.getElementById('lblAudio').innerText = txt.lAudio;
@@ -410,20 +270,19 @@
             
             document.getElementById('txtHeaderVoice').innerText = txt.hVoice;
             document.getElementById('lblVoice').innerText = txt.lVoice;
-            
-            document.getElementById('btnReloadVoice').innerText = txt.bReload; 
+            document.getElementById('btnReloadVoice').innerText = txt.bReload;
             document.getElementById('lblSpeed').innerText = txt.lSpeed;
-            document.getElementById('btnTestVoice').innerText = txt.bTest; 
+            document.getElementById('btnTestVoice').innerText = txt.bTest;
             
             document.getElementById('txtHeaderDucking').innerText = txt.hDuck;
             document.getElementById('lblDucking').innerText = txt.lDuck;
             
             document.getElementById('txtHeaderControls').innerText = txt.hCtrl;
             document.getElementById('btnBack10').innerText = txt.bBack;
-            document.getElementById('btnPlay').innerText = txt.bPlay; 
+            document.getElementById('btnPlay').innerText = txt.bPlay;
             document.getElementById('btnFwd10').innerText = txt.bFwd;
             
-            document.getElementById('btnMute').innerText = txt.bMuteOn; 
+            document.getElementById('btnMute').innerText = txt.bMuteOn; // Começa com som, botão diz "Ativar Mudo"
             
             document.getElementById('btnBack60').innerText = txt.bBack60;
             document.getElementById('btnFwd60').innerText = txt.bFwd60;
@@ -432,29 +291,22 @@
             document.getElementById('btnSyncMinus').innerText = txt.bSyncM;
             document.getElementById('btnSyncPlus').innerText = txt.bSyncP;
 
-            // Atualiza Aria Labels dos botões que não são o link de instruções
-            document.getElementById('btnReloadVoice').setAttribute("aria-label", txt.bReload); 
-            document.getElementById('btnTestVoice').setAttribute("aria-label", txt.bTest); 
+            // Atualiza Aria Labels
             document.getElementById('btnBack10').setAttribute("aria-label", txt.bBack + ", J");
-            document.getElementById('btnPlay').setAttribute("aria-label", txt.bPlay + ", K"); 
+            document.getElementById('btnPlay').setAttribute("aria-label", txt.bPlay + ", K");
             document.getElementById('btnFwd10').setAttribute("aria-label", txt.bFwd + ", L");
-            
             document.getElementById('btnMute').setAttribute("aria-label", txt.bMuteOn + ", M");
             
-            document.getElementById('btnBack60').setAttribute("aria-label", txt.bBack60); 
-            document.getElementById('btnFwd60').setAttribute("aria-label", txt.bFwd60); 
+            document.getElementById('btnBack60').setAttribute("aria-label", txt.bBack60);
+            document.getElementById('btnFwd60').setAttribute("aria-label", txt.bFwd60);
             
-            const syncLabelMinus = currentLang === 'pt' ? "Atrasar audiodescrição 1 segundo, vírgula" : "Delay audio description 1 second, comma";
-            const syncLabelPlus = currentLang === 'pt' ? "Adiantar audiodescrição 1 segundo, ponto" : "Advance audio description 1 second, period";
-            document.getElementById('btnSyncMinus').setAttribute("aria-label", syncLabelMinus);
-            document.getElementById('btnSyncPlus').setAttribute("aria-label", syncLabelPlus);
-            
+            // Inicializa monitor se estiver vazio
             if (document.getElementById('monitor-legenda').innerText.trim() === '...') {
                  document.getElementById('monitor-legenda').innerText = '- - -';
             }
         };
 
-        // --- VARIÁVEIS E FUNÇÕES DO PLAYER ---
+        // --- VARIÁVEIS DO PLAYER ---
         const audio = document.getElementById('mainAudio');
         const btnPlay = document.getElementById('btnPlay');
         const btnMute = document.getElementById('btnMute');
@@ -473,6 +325,7 @@
 
         let globalUtterance = null; 
         
+        // --- WAKE LOCK ---
         let wakeLock = null;
 
         async function requestWakeLock() {
@@ -492,6 +345,7 @@
             }
         }
 
+        // --- VOZES ---
         let voices = [];
         function populateVoices() {
             voices = synth.getVoices();
@@ -536,6 +390,7 @@
             if (synth.getVoices().length === 0) alert(txt.alertReload);
         }
 
+        // --- SELECTS ---
         function populateSpeed() {
             speedSelect.innerHTML = '';
             for (let i = 0.5; i <= 5.1; i += 0.1) {
@@ -563,6 +418,7 @@
         }
         populateDucking();
 
+        // --- AUDIO ENGINE ---
         function fadeAudioTo(targetVolume) {
             if(audio.muted) return; 
             if (fadeInterval) clearInterval(fadeInterval);
@@ -596,6 +452,7 @@
             u.volume = 1.0;
         }
 
+        // --- FILES ---
         document.getElementById('audioFile').addEventListener('change', (e) => {
             if(e.target.files[0]) {
                 audio.src = URL.createObjectURL(e.target.files[0]);
@@ -631,6 +488,7 @@
             } catch { return -1; }
         }
 
+        // --- CONTROLS ---
         function togglePlay() {
             if (audio.paused) {
                 const wakeUp = new SpeechSynthesisUtterance(" ");
@@ -656,10 +514,12 @@
         function toggleMute() {
             audio.muted = !audio.muted;
             if (audio.muted) {
+                // Está mudo agora. Botão deve dizer "Desativar Mudo" (Restaurar som)
                 btnMute.innerText = txt.bMuteOff;
                 btnMute.setAttribute("aria-label", txt.bMuteOff + ", M");
                 if(fadeInterval) clearInterval(fadeInterval);
             } else {
+                // Tem som agora. Botão deve dizer "Ativar Mudo"
                 btnMute.innerText = txt.bMuteOn;
                 btnMute.setAttribute("aria-label", txt.bMuteOn + ", M");
                 audio.volume = 1.0; 
@@ -693,6 +553,7 @@
             }
         });
 
+        // --- LÓGICA DE FALA ---
         audio.addEventListener('timeupdate', () => {
             const currentTime = audio.currentTime;
             const sub = subtitles.find((s, i) => {
