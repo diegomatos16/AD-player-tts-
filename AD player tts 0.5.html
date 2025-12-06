@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AD player tts 0.5</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 { color: #ffffff; margin-bottom: 5px; }
+        h2 { color: #bbbbbb; margin-top: 30px; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        p { color: #cccccc; margin-bottom: 20px; }
+
+        .input-group { margin-bottom: 20px; display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 8px; display: block; font-size: 1.1em; }
+        
+        input[type="file"], select {
+            background: #333;
+            color: #fff;
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        input:focus, select:focus, button:focus {
+            outline: 3px solid #0099ff;
+            border-color: #0099ff;
+        }
+
+        button {
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            font-size: 1.1em;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #004494; }
+        
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            background-color: #444;
+            margin-top: 5px;
+            width: fit-content;
+        }
+
+        #btnMute { background-color: #555; }
+
+        #monitor-legenda {
+            background: #000;
+            color: yellow;
+            padding: 10px;
+            min-height: 1.5em;
+            margin-bottom: 10px;
+            border: 1px solid #444;
+        }
+
+        .sr-status { font-style: italic; color: #888; font-size: 0.9em; margin-top: 5px; }
+        
+        /* Classe para os botões de 1 minuto para dar um espaçamento extra se quiser */
+        .btn-minute {
+            background-color: #004085; /* Um azul um pouco mais escuro para diferenciar */
+        }
+
+        /* ESTILOS PARA O MODAL DE TUTORIAL */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none; /* Escondido por padrão */
+        }
+        
+        .modal-content {
+            background-color: #333;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+            color: #fff;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: #fff;
+            text-decoration: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1 id="txtTitle">AD player tts</h1>
+    <p id="txtSubtitle">
+        Seja bem-vindo ao player de audiodescrição!
+        <br><br>
+        Este player foi desenvolvido para permitir que audiodescrições no formato .srt, utilizado em arquivos de legendas, sejam lidas pela voz TTS do seu sistema.
+        <br><br>
+        Este projeto foi criado por Diego Ricardo Matos, com o apoio do modelo Gemini 3 Pro.
+    </p>
+
+    <p id="txtInstructions">
+        Para conferir as notas de uso, <a href="#" id="btnShowTutorial" onclick="showTutorialModal(); return false;" aria-label="Abrir notas de uso do player.">clique aqui</a>.
+    </p>
+    
+    <div id="monitor-legenda">- - -</div>
+
+    <h2 id="txtHeaderFiles">Escolha de arquivos</h2>
+
+    <div class="input-group">
+        <label id="lblAudio" for="audioFile">Selecione o arquivo de áudio:</label>
+        <input type="file" id="audioFile" accept="audio/*">
+    </div>
+
+    <div class="input-group">
+        <label id="lblSrt" for="srtFile">Selecione o arquivo de audiodescrição (.srt):</label>
+        <input type="file" id="srtFile" accept=".srt">
+    </div>
+
+    <h2 id="txtHeaderVoice">Ajustes de voz</h2>
+
+    <div class="input-group">
+        <label id="lblVoice" for="voiceSelect">Selecione a Voz:</label>
+        <select id="voiceSelect"><option>...</option></select>
+        <button id="btnReloadVoice" onclick="forceLoadVoices()" class="btn-small" aria-label="Recarregar vozes">🔄 Recarregar Vozes</button>
+    </div>
+
+    <div class="input-group">
+        <label id="lblSpeed" for="speedSelect">Selecione a Velocidade:</label>
+        <select id="speedSelect"></select>
+    </div>
+
+    <button id="btnTestVoice" onclick="testVoice()" aria-label="Testar voz">Testar Voz </button>
+
+    <h2 id="txtHeaderDucking">Controles de volume</h2>
+
+    <div class="input-group">
+        <label id="lblDucking" for="duckingSelect">Volume da redução do áudio:</label>
+        <select id="duckingSelect"></select>
+    </div>
+    
+    <button id="btnMute" onclick="toggleMute()" aria-label="Mudo">Ativar Mudo</button>
+
+    <h2 id="txtHeaderControls">Controles do player</h2>
+    
+    <div class="input-group">
+        <div>
+            <button id="btnBack10" onclick="seek(-10)" aria-label="Retroceder 10 segundos">Retroceder 10 segundos</button>
+            <button id="btnPlay" onclick="togglePlay()" aria-label="reproduzir / pausar">Reproduzir / pausar</button>
+            <button id="btnFwd10" onclick="seek(10)" aria-label="Avançar 10 segundos">Avançar 10 segundos</button>
+            
+            <button id="btnBack60" onclick="seek(-60)" class="btn-minute" aria-label="Retroceder 1 minuto">Retroceder 1 minuto</button>
+            <button id="btnFwd60" onclick="seek(60)" class="btn-minute" aria-label="Avançar 1 minuto">Avançar 1 minuto</button>
+        </div>
+        <br>
+        
+        <h2 id="txtHeaderSync">Sincronia da audiodescrição</h2>
+
+        <div>
+            <button id="btnSyncMinus" onclick="adjustSync(-1)" aria-label="Atrasar audiodescrição 1 segundo">Atrasar AD 1s</button>
+            <button id="btnSyncPlus" onclick="adjustSync(1)" aria-label="Adiantar audiodescrição 1 segundo">Adiantar AD 1s</button>
+        </div>
+        <div id="syncStatus" class="sr-status" aria-live="polite">0s</div>
+    </div>
+
+    <audio id="mainAudio"></audio>
+
+    <div id="tutorialModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-content" role="document">
+            <span class="close-button" onclick="hideTutorialModal()" role="button" aria-label="Fechar notas de uso">&times;</span>
+            
+            <h2 id="modalTitle">Notas de Uso</h2>
+            
+            <div id="tutorialContent">
+                </div>
+            
+            <button onclick="hideTutorialModal()">Entendido!</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. DICIONÁRIO DE IDIOMAS ---
+        const langData = {
+            pt: {
+                title: "AD player tts",
+                subtitle: "Seja bem-vindo ao player de audiodescrição!\n\nEste player foi desenvolvido para permitir que audiodescrições no formato .srt, utilizado em arquivos de legendas, sejam lidas pela voz TTS do seu sistema.\n\nEste projeto foi criado por Diego Ricardo Matos, com o apoio do modelo Gemini 3 Pro.",
+                instructions: "Para conferir as notas de uso, clique aqui. Nota: Abrirá uma caixa de diálogo no final da página",
+                instructionsLinkAria: "Abrir notas de uso do player.", // NOVO
+                hFiles: "Escolha de arquivos",
+                lAudio: "Selecione o arquivo de áudio:",
+                lSrt: "Selecione o arquivo de audiodescrição (.srt):",
+                hVoice: "Ajustes de voz",
+                lVoice: "Selecione a Voz:",
+                bReload: "Recarregar Vozes",
+                lSpeed: "Selecione a Velocidade:",
+                bTest: "Testar Voz",
+                hDuck: "Controles de volume",
+                lDuck: "Volume da redução do áudio:",
+                hCtrl: "Controles do player",
+                bBack: "Retroceder 10 segundos",
+                bPlay: "Reproduzir", 
+                bPause: "Pausar", 
+                bFwd: "Avançar 10 segundos",
+                
+                // Botão Mudo (Estados)
+                bMuteOn: "Ativar Mudo do áudio",
+                bMuteOff: "Desativar Mudo do áudio",
+                
+                // Novos Botões 1 Minuto
+                bBack60: "Retroceder 1 minuto",
+                bFwd60: "Avançar 1 minuto",
+
+                // Sincronia
+                hSync: "Sincronia da audiodescrição",
+                bSyncM: "Atrasar AD 1s", 
+                bSyncP: "Adiantar AD 1s", 
+                
+                // NOTAS
+                modalTitle: "Notas de Uso",
+                modalContent: [
+                    "No Windows, as vozes disponíveis são as da Microsoft (OneCore) e as do Google TTS (online).",
+                    "É recomendável utilizar as vozes do Google TTS até a velocidade de 1.7. Acima disso, as vozes podem parecer não estar funcionando, mas na realidade, estão apenas atingindo o limite máximo de velocidade.",
+                    "No Android, pode ser detectada apenas a voz padrão do sistema.",
+                    "No Android, não é possível bloquear a tela e continuar ouvindo a audiodescrição."
+                ].join('\n'), 
+                modalClose: "Entendido!",
+                modalCloseAria: "Fechar notas de uso",
+
+                loading: "Aguardando arquivos...",
+                adLoaded: "Audiodescrição carregada",
+                audioReady: "Áudio pronto.",
+                testPhrase: "Teste de voz.",
+                alertReload: "Tente recarregar a página."
+            },
+            // TEXTOS EM INGLÊS
+            en: {
+                title: "AD Player TTS", 
+                subtitle: "Welcome to the Audio Description Player!\n\nThis player is designed to allow audio descriptions in the .srt format, used in subtitle files, to be read by your system's TTS voice.\n\nThis project was created by Diego Ricardo Matos, with the support of the Gemini 3 Pro model.",
+                instructions: "To check the usage notes, click here. Note: A dialog box will open at the bottom of the page",
+                instructionsLinkAria: "Open player usage notes.", // NOVO
+                hFiles: "File Selection",
+                lAudio: "Select Audio File:",
+                lSrt: "Select Audio Description File (.srt):",
+                hVoice: "Voice Settings",
+                lVoice: "Select Voice:",
+                bReload: "Reload Voices", 
+                lSpeed: "Select Speed:",
+                bTest: "Test Voice", 
+                hDuck: "Volume Controls",
+                lDuck: "Audio Ducking Volume:",
+                hCtrl: "Player Controls",
+                bBack: "Rewind 10 seconds",
+                bPlay: "Play",
+                bPause: "Pause",
+                bFwd: "Forward 10 seconds",
+                
+                bMuteOn: "Mute Audio",
+                bMuteOff: "Unmute Audio",
+                
+                bBack60: "Rewind 1 minute",
+                bFwd60: "Forward 1 minute",
+
+                hSync: "Audio Description Synchronization",
+                bSyncM: "Delay AD 1s", 
+                bSyncP: "Advance AD 1s",
+                
+                // NOTAS
+                modalTitle: "Usage Notes",
+                modalContent: [
+                    "On Windows, the available voices are from Microsoft (OneCore) and Google TTS (online).",
+                    "It is recommended to use Google TTS voices up to speed 1.7. Above that, the voices might seem not to be working, but they are just reaching their maximum speed limit.",
+                    "On Android, only the system's default voice may be detected.",
+                    "On Android, it is not possible to lock the screen and continue listening to the audio description."
+                ].join('\n'),
+                modalClose: "Understood!",
+                modalCloseAria: "Close usage notes",
+                
+                loading: "Waiting for files...",
+                adLoaded: "Audio Description loaded",
+                audioReady: "Audio ready.",
+                testPhrase: "Voice test.",
+                alertReload: "Please reload the page."
+            }
+        };
+
+        // Detecta idioma (Suporte a ?lang=en na URL para testes)
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceLang = urlParams.get('lang');
+        const userLang = forceLang || navigator.language || navigator.userLanguage;  
+        const currentLang = (userLang.startsWith('pt')) ? 'pt' : 'en';
+        const txt = langData[currentLang];
+
+        // --- FUNÇÕES DO MODAL ---
+        const tutorialModal = document.getElementById('tutorialModal');
+        const modalContentArea = document.getElementById('tutorialContent');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalCloseButton = tutorialModal.querySelector('.close-button');
+        const modalAcknowledgeButton = tutorialModal.querySelector('.modal-content button');
+        const btnShowTutorial = document.getElementById('btnShowTutorial');
+
+        function formatNotesAsList(content) {
+            // Converte o texto separado por '\n' em uma lista não ordenada (<ul>)
+            const items = content.split('\n').map(item => `<li>${item.trim()}</li>`).join('');
+            return `<ul>${items}</ul>`;
+        }
+
+        function showTutorialModal() {
+            // Aplica textos do modal
+            modalTitle.innerText = txt.modalTitle;
+            modalAcknowledgeButton.innerText = txt.modalClose;
+            
+            // INJETA O CONTEÚDO COMO UMA LISTA
+            modalContentArea.innerHTML = formatNotesAsList(txt.modalContent);
+            
+            // ATUALIZA ARIA-LABEL DO BOTÃO FECHAR
+            modalCloseButton.setAttribute("aria-label", txt.modalCloseAria);
+
+            // Mostra o modal
+            tutorialModal.style.display = 'block';
+            
+            // Foca no botão de fechar para acessibilidade
+            modalCloseButton.focus();
+
+            // Desativa a rolagem do corpo da página (opcional, mas recomendado para modais)
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideTutorialModal() {
+            tutorialModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+
+            // Foca de volta no link que abriu o modal
+            btnShowTutorial.focus();
+        }
+
+        // Fecha o modal ao clicar fora dele
+        window.onclick = function(event) {
+            if (event.target == tutorialModal) {
+                hideTutorialModal();
+            }
+        }
+
+        // Fecha o modal com a tecla ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && tutorialModal.style.display === 'block') {
+                hideTutorialModal();
+            }
+        });
+        
+        // Aplica textos na inicialização
+        window.onload = function() {
+            // Aplica Título
+            document.getElementById('txtTitle').innerText = txt.title;
+            
+            // Aplica Subtítulo
+            document.getElementById('txtSubtitle').innerHTML = txt.subtitle.replace(/\n/g, '<br>');
+            
+            // CORREÇÃO FINAL DA TRADUÇÃO DO LINK
+            const instructionsElement = document.getElementById('txtInstructions');
+            
+            // 1. Obtém a tag <a> HTML do link existente
+            const linkTag = instructionsElement.querySelector('a');
+            
+            // 2. Define o ARIA-LABEL correto do link
+            linkTag.setAttribute("aria-label", txt.instructionsLinkAria);
+            
+            // 3. Obtém o HTML do link, garantindo que o novo aria-label esteja nele
+            const linkHtml = linkTag.outerHTML; 
+            
+            const fullInstructionsText = txt.instructions;
+            
+            // 4. Encontra o placeholder (o texto do link no dicionário, e não no HTML)
+            const linkPlaceholder = currentLang === 'pt' ? 'clique aqui' : 'click here';
+            
+            // 5. Substitui o placeholder pelo HTML do link completo
+            let finalHtml = fullInstructionsText.replace(linkPlaceholder, linkHtml);
+            
+            instructionsElement.innerHTML = finalHtml;
+            // Fim da Correção.
+            
+            document.getElementById('txtHeaderFiles').innerText = txt.hFiles;
+            document.getElementById('lblAudio').innerText = txt.lAudio;
+            document.getElementById('lblSrt').innerText = txt.lSrt;
+            
+            document.getElementById('txtHeaderVoice').innerText = txt.hVoice;
+            document.getElementById('lblVoice').innerText = txt.lVoice;
+            
+            document.getElementById('btnReloadVoice').innerText = txt.bReload; 
+            document.getElementById('lblSpeed').innerText = txt.lSpeed;
+            document.getElementById('btnTestVoice').innerText = txt.bTest; 
+            
+            document.getElementById('txtHeaderDucking').innerText = txt.hDuck;
+            document.getElementById('lblDucking').innerText = txt.lDuck;
+            
+            document.getElementById('txtHeaderControls').innerText = txt.hCtrl;
+            document.getElementById('btnBack10').innerText = txt.bBack;
+            document.getElementById('btnPlay').innerText = txt.bPlay; 
+            document.getElementById('btnFwd10').innerText = txt.bFwd;
+            
+            document.getElementById('btnMute').innerText = txt.bMuteOn; 
+            
+            document.getElementById('btnBack60').innerText = txt.bBack60;
+            document.getElementById('btnFwd60').innerText = txt.bFwd60;
+
+            document.getElementById('txtHeaderSync').innerText = txt.hSync;
+            document.getElementById('btnSyncMinus').innerText = txt.bSyncM;
+            document.getElementById('btnSyncPlus').innerText = txt.bSyncP;
+
+            // Atualiza Aria Labels dos botões que não são o link de instruções
+            document.getElementById('btnReloadVoice').setAttribute("aria-label", txt.bReload); 
+            document.getElementById('btnTestVoice').setAttribute("aria-label", txt.bTest); 
+            document.getElementById('btnBack10').setAttribute("aria-label", txt.bBack + ", J");
+            document.getElementById('btnPlay').setAttribute("aria-label", txt.bPlay + ", K"); 
+            document.getElementById('btnFwd10').setAttribute("aria-label", txt.bFwd + ", L");
+            
+            document.getElementById('btnMute').setAttribute("aria-label", txt.bMuteOn + ", M");
+            
+            document.getElementById('btnBack60').setAttribute("aria-label", txt.bBack60); 
+            document.getElementById('btnFwd60').setAttribute("aria-label", txt.bFwd60); 
+            
+            const syncLabelMinus = currentLang === 'pt' ? "Atrasar audiodescrição 1 segundo, vírgula" : "Delay audio description 1 second, comma";
+            const syncLabelPlus = currentLang === 'pt' ? "Adiantar audiodescrição 1 segundo, ponto" : "Advance audio description 1 second, period";
+            document.getElementById('btnSyncMinus').setAttribute("aria-label", syncLabelMinus);
+            document.getElementById('btnSyncPlus').setAttribute("aria-label", syncLabelPlus);
+            
+            if (document.getElementById('monitor-legenda').innerText.trim() === '...') {
+                 document.getElementById('monitor-legenda').innerText = '- - -';
+            }
+        };
+
+        // --- VARIÁVEIS E FUNÇÕES DO PLAYER ---
+        const audio = document.getElementById('mainAudio');
+        const btnPlay = document.getElementById('btnPlay');
+        const btnMute = document.getElementById('btnMute');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const speedSelect = document.getElementById('speedSelect');
+        const duckingSelect = document.getElementById('duckingSelect');
+        const monitor = document.getElementById('monitor-legenda');
+        const syncStatus = document.getElementById('syncStatus');
+        
+        const synth = window.speechSynthesis;
+        let subtitles = [];
+        let syncOffset = 0;
+        let lastReadIndex = -1;
+        let fadeInterval = null;
+        const FADE_DURATION = 600;  
+
+        let globalUtterance = null; 
+        
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.log('Wake Lock Error:', err);
+                }
+            }
+        }
+
+        async function releaseWakeLock() {
+            if (wakeLock !== null) {
+                await wakeLock.release();
+                wakeLock = null;
+            }
+        }
+
+        let voices = [];
+        function populateVoices() {
+            voices = synth.getVoices();
+            if (voices.length === 0) return;
+            voiceSelect.innerHTML = '';
+            
+            let prefFound = false;
+            const targetLang = currentLang === 'pt' ? 'pt' : 'en';
+
+            voices.forEach((v, i) => {
+                if(v.lang.toLowerCase().includes(targetLang) || v.name.includes('Google') || v.name.includes('Microsoft')) {
+                    const opt = document.createElement('option');
+                    opt.textContent = v.name;
+                    opt.value = i;
+                    voiceSelect.appendChild(opt);
+                    prefFound = true;
+                }
+            });
+            if (!prefFound) {
+                 voices.forEach((v, i) => {
+                    const opt = document.createElement('option');
+                    opt.textContent = v.name;
+                    opt.value = i;
+                    voiceSelect.appendChild(opt);
+                });
+            }
+        }
+
+        if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoices;
+        populateVoices();
+        
+        const voiceLoaderInterval = setInterval(() => {
+            if (synth.getVoices().length > 0) {
+                populateVoices();
+                clearInterval(voiceLoaderInterval);
+            }
+        }, 100);
+
+        function forceLoadVoices() {
+            populateVoices();
+            synth.cancel();
+            if (synth.getVoices().length === 0) alert(txt.alertReload);
+        }
+
+        function populateSpeed() {
+            speedSelect.innerHTML = '';
+            for (let i = 0.5; i <= 5.1; i += 0.1) {
+                let val = Math.round(i * 10) / 10;
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.text = val + "x";
+                if (val === 2.0) opt.selected = true;
+                speedSelect.appendChild(opt);
+            }
+        }
+        populateSpeed();
+
+        function populateDucking() {
+            duckingSelect.innerHTML = '';
+            for (let i = 0; i <= 100; i += 5) {
+                const opt = document.createElement('option');
+                opt.value = i / 100; 
+                if(i === 0) opt.text = "0%";
+                else if(i === 100) opt.text = "100%";
+                else opt.text = i + "%";
+                if (i === 15) opt.selected = true;
+                duckingSelect.appendChild(opt);
+            }
+        }
+        populateDucking();
+
+        function fadeAudioTo(targetVolume) {
+            if(audio.muted) return; 
+            if (fadeInterval) clearInterval(fadeInterval);
+            const startVolume = audio.volume;
+            const diff = targetVolume - startVolume;
+            if(Math.abs(diff) < 0.01) { audio.volume = targetVolume; return; }
+            const steps = 30; 
+            const stepTime = FADE_DURATION / steps;
+            const stepValue = diff / steps;
+            let currentStep = 0;
+            fadeInterval = setInterval(() => {
+                currentStep++;
+                let newVol = startVolume + (stepValue * currentStep);
+                newVol = Math.max(0, Math.min(1, newVol)); 
+                audio.volume = newVol;
+                if (currentStep >= steps) { clearInterval(fadeInterval); audio.volume = targetVolume; }
+            }, stepTime);
+        }
+
+        function testVoice() {
+            if (synth.speaking) synth.cancel();
+            const u = new SpeechSynthesisUtterance(txt.testPhrase);
+            setupUtterance(u);
+            synth.speak(u);
+        }
+
+        function setupUtterance(u) {
+            const voices = synth.getVoices();
+            if (voices[voiceSelect.value]) u.voice = voices[voiceSelect.value];
+            u.rate = parseFloat(speedSelect.value);
+            u.volume = 1.0;
+        }
+
+        document.getElementById('audioFile').addEventListener('change', (e) => {
+            if(e.target.files[0]) {
+                audio.src = URL.createObjectURL(e.target.files[0]);
+                monitor.innerText = txt.audioReady;
+                audio.volume = 1.0;
+            }
+        });
+
+        document.getElementById('srtFile').addEventListener('change', (e) => {
+            if(e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (evt) => parseSRT(evt.target.result);
+                reader.readAsText(e.target.files[0]);
+            }
+        });
+
+        function parseSRT(text) {
+            subtitles = [];
+            const regex = /(\d{2}:\d{2}:\d{2}[,.]\d{3}) --> (\d{2}:\d{2}:\d{2}[,.]\d{3})[\r\n]+([\s\S]*?)(?=\n\n|\r\n\r\n|$)/g;
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const start = timeToSeconds(match[1]);
+                let content = match[3].replace(/<[^>]*>/g, "").replace(/\n/g, " ");
+                if (start !== -1 && content.trim()) subtitles.push({ start, text: content });
+            }
+            monitor.innerText = `${txt.adLoaded} (${subtitles.length}).`;
+        }
+
+        function timeToSeconds(t) {
+            const p = t.split(':');
+            try {
+                return (parseFloat(p[0]) * 3600) + (parseFloat(p[1]) * 60) + parseFloat(p[2].replace(',', '.'));
+            } catch { return -1; }
+        }
+
+        function togglePlay() {
+            if (audio.paused) {
+                const wakeUp = new SpeechSynthesisUtterance(" ");
+                wakeUp.volume = 0;
+                synth.speak(wakeUp);
+
+                audio.play();
+                requestWakeLock();
+
+                btnPlay.innerText = txt.bPause;
+                btnPlay.setAttribute("aria-label", txt.bPause + ", K");
+            } else {
+                audio.pause();
+                releaseWakeLock();
+
+                btnPlay.innerText = txt.bPlay;
+                btnPlay.setAttribute("aria-label", txt.bPlay + ", K");
+                synth.cancel();
+                fadeAudioTo(1.0);
+            }
+        }
+
+        function toggleMute() {
+            audio.muted = !audio.muted;
+            if (audio.muted) {
+                btnMute.innerText = txt.bMuteOff;
+                btnMute.setAttribute("aria-label", txt.bMuteOff + ", M");
+                if(fadeInterval) clearInterval(fadeInterval);
+            } else {
+                btnMute.innerText = txt.bMuteOn;
+                btnMute.setAttribute("aria-label", txt.bMuteOn + ", M");
+                audio.volume = 1.0; 
+            }
+        }
+
+        function seek(sec) {
+            audio.currentTime += sec;
+            lastReadIndex = -1;
+            synth.cancel();
+            if(fadeInterval) clearInterval(fadeInterval);
+            if(!audio.muted) audio.volume = 1.0; 
+        }
+
+        function adjustSync(sec) {
+            syncOffset += sec;
+            const direction = syncOffset > 0 ? "+" : "";
+            syncStatus.innerText = `Sync: ${direction}${syncOffset}s`;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const tag = e.target.tagName.toUpperCase();
+            if (tag === 'INPUT' || tag === 'SELECT') return;
+            switch(e.key.toLowerCase()) {
+                case 'k': case ' ': e.preventDefault(); togglePlay(); break;
+                case 'j': seek(-10); break;
+                case 'l': seek(10); break;
+                case ',': adjustSync(-1); break;
+                case '.': adjustSync(1); break;
+                case 'm': toggleMute(); break;
+            }
+        });
+
+        audio.addEventListener('timeupdate', () => {
+            const currentTime = audio.currentTime;
+            const sub = subtitles.find((s, i) => {
+                const start = s.start + syncOffset;
+                return i !== lastReadIndex && currentTime >= start && currentTime < (start + 0.6);
+            });
+            if (sub) {
+                lastReadIndex = subtitles.indexOf(sub);
+                speakSubtitle(sub.text);
+            }
+        });
+
+        function speakSubtitle(text) {
+            synth.cancel();
+            
+            const u = new SpeechSynthesisUtterance(text);
+            setupUtterance(u);
+            globalUtterance = u; 
+            
+            u.onend = () => { 
+                if (!audio.paused) fadeAudioTo(1.0);
+                globalUtterance = null; 
+            };
+            
+            u.onerror = () => { 
+                if(!audio.muted) audio.volume = 1.0;
+                globalUtterance = null; 
+            };
+
+            monitor.innerText = text;
+            const duckLevel = parseFloat(duckingSelect.value);
+
+            u.onstart = () => { if (!audio.paused) fadeAudioTo(duckLevel); };
+
+            synth.speak(u);
+        }
+    </script>
+</body>
+</html>
