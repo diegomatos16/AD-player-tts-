@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AD player tts 0.5.02</title>
+    <title>AD player tts 0.5.03</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -28,11 +28,11 @@
             border: 1px solid #555;
             border-radius: 5px;
             font-size: 1em;
-            /* CORREÇÃO ROBUSTA PARA GARANTIR CLIQUE NO iOS */
-            display: block; /* Garante que o elemento tome seu espaço */
-            position: relative; /* Essencial para que z-index funcione */
-            z-index: 2; /* Garante que o input fique acima de outros elementos invisíveis */
-            height: 44px; /* Garante uma altura mínima de toque */
+            /* Correção robusta para garantir clique no iOS/Mobile */
+            display: block; 
+            position: relative; 
+            z-index: 2; 
+            height: 44px; 
             line-height: 24px;
             touch-action: manipulation;
             cursor: pointer;
@@ -102,12 +102,12 @@
 
     <div class="input-group">
         <label id="lblAudio" for="audioFile">Selecione o arquivo de áudio:</label>
-        <input type="file" id="audioFile" accept="audio/*">
+        <input type="file" id="audioFile"> 
     </div>
 
     <div class="input-group">
         <label id="lblSrt" for="srtFile">Selecione o arquivo de audiodescrição (.srt):</label>
-        <input type="file" id="srtFile" accept=".srt">
+        <input type="file" id="srtFile">
     </div>
 
     <h2 id="txtHeaderVoice">Ajustes de voz</h2>
@@ -161,7 +161,6 @@
     <script>
         // --- DETECÇÃO DE MOBILE ---
         function isMobile() {
-            // Verifica a string do agente do usuário para identificar dispositivos móveis comuns
             return /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
         }
         const isMobileDevice = isMobile();
@@ -490,13 +489,13 @@
                 requestWakeLock();
 
                 btnPlay.innerText = txt.bPause;
-                btnPlay.setAttribute("aria-label", getAriaLabel(txt.bPause, "K")); // ATUALIZADO
+                btnPlay.setAttribute("aria-label", getAriaLabel(txt.bPause, "K"));
             } else {
                 audio.pause();
                 releaseWakeLock();
 
                 btnPlay.innerText = txt.bPlay;
-                btnPlay.setAttribute("aria-label", getAriaLabel(txt.bPlay, "K")); // ATUALIZADO
+                btnPlay.setAttribute("aria-label", getAriaLabel(txt.bPlay, "K"));
                 synth.cancel();
                 fadeAudioTo(1.0);
             }
@@ -505,12 +504,14 @@
         function toggleMute() {
             audio.muted = !audio.muted;
             if (audio.muted) {
+                // Está mudo agora. Botão deve dizer "Desativar Mudo" (Restaurar som)
                 btnMute.innerText = txt.bMuteOff;
-                btnMute.setAttribute("aria-label", getAriaLabel(txt.bMuteOff, "M")); // ATUALIZADO
+                btnMute.setAttribute("aria-label", getAriaLabel(txt.bMuteOff, "M"));
                 if(fadeInterval) clearInterval(fadeInterval);
             } else {
+                // Tem som agora. Botão deve dizer "Ativar Mudo"
                 btnMute.innerText = txt.bMuteOn;
-                btnMute.setAttribute("aria-label", getAriaLabel(txt.bMuteOn, "M")); // ATUALIZADO
+                btnMute.setAttribute("aria-label", getAriaLabel(txt.bMuteOn, "M"));
                 audio.volume = 1.0; 
             }
         }
